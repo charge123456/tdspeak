@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+  tdspeak_1:
+    image: sywucluster-node01:5000/tdspeak 
+  tdspeak_2:
+    image: sywucluster-node01:5000/tdspeak
+  tdspeak_3:
+    image: sywucluster-node01:5000/tdspeak
+  tdspeak_4:
+    image: sywucluster-node01:5000/tdspeak
+  tdspeak_5:
+    image: sywucluster-node01:5000/tdspeak
+  nginx:
+    image: sywucluster-node01:5000/httpd_for_tdspeak
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /synas_data/phyiotlab_site/nginx/cert:/etc/nginx/cert
+      - /synas_data/phyiotlab_site/nginx/conf.d:/etc/nginx/conf.d
+      - /synas_data/phyiotlab_site/nginx/uwsgi_params:/etc/nginx/uwsgi_params
+      - /synas_data/phyiotlab_site/html:/usr/share/nginx/html
+    depends_on:
+      - tdspeak_1
+      - tdspeak_2
+      - tdspeak_3
+      - tdspeak_4
+      - tdspeak_5

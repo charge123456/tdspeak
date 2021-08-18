@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>SYWUSpeak - Data Viewer ({{project.project_name}})</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+          integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+          crossorigin="anonymous">
+        </script>
+    </head>
+    <body>
+        <div>
+            <h1>View project - {{project.project_name}}</h1>
+        </div>
+        <p>Here is some information about this project.</p>
+        {% for chart, trace_set in chart_set.items %}
+        <div id='{{chart|cut:' '}}' style="width:640px; height:480px;float:left;text-align:center;border: 1px solid;">
+            <span style="display: inline-block;height: 100%;vertical-align: middle;"></span>
+            <img style="vertical-align: middle;max-height: 200px;width: 200px;" src="/static/img/loading.gif" />
+        </div>
+        {% endfor %}
+        <script>
+          var data_set = [];
+          var datapoint = [];
+          var has_newdata;
+          var data_step = 0;
+          var data_ready = parseInt({{label_count}});
+          $(document).ready(function() {
+            console.log("Start load data...");
+            {% for label in labels %}
+            get_all_data({{label.id}}, '{{label}}');
+            {% endfor %}
+          });
+
+          draw_plot = function(){
+            {% for chart, trace_set in chart_set.items %}
+            $('#'+'{{chart|cut:' '}}').html('');
+            data_{{chart|cut:' '}} = [];
+            {% for trace in trace_set %}
+            var trace_{{trace.id}} = {
+              x: data_set['{{trace.xAxis}}'],
+              y: data_set['{{trace.yAxis}}'],
+              mode: 'lines+markers'
+            };
+            data_{{chart|cut:' '}}.push(trace_{{trace.id}});
+            {% endfor %}
+            var layout_{{chart|cut:' '}} = {
+              title:'{{chart}}'
+            };
+            Plotly.newPlot({{chart|cut:' '}}, data_{{chart|cut:' '}}, layout_{{chart|cut:' '}}, {displaylogo: false});
+            {% endfor %}
+            console.log('Drew all chart!');
+          };
+
+          redraw_plot = function(){
+            {% for chart, trace_set in chart_set.items %}
+
+            {% for trace in trace_set %}
+            {{chart|cut:' '}}.data[{{ forloop.counter0 }}]['x'] = data_set['{{trace.xAxis}}'];
+            {{chart|cut:' '}}.data[{{ forloop.counter0 }}]['y'] = data_set['{{trace.yAxis}}'];
+            {% endfor %}
+
+            Plotly.redraw({{chart|cut:' '}});
+            {% endfor %}
+            console.log('Updated all chart!');
+          };
+
+          get_all_data = function(label_id, label){
+            $.ajax({
+              url: '/dataviewer/getData/',
+              type: 'GET',
+              data: {
+                label_id: label_id
+              },
+              error: function(xhr) {
+                console.log('Can not get the data.(Error code: 1)');
+              },
+              success: function(response) {
+                if(response != 0){
+                  update_chart(response.id, response.data, label, true);
+                }else{
+                  has_newdata = false;
+                  console.log('No new data for ' + label);
+                }
+              }
+            });
+          };
+
+          get_latest_data = function(data_id, label_id, label){
+            $.ajax({
+              url: '/dataviewer/getData/',
+              type: 'GET',
+              data: {
+                data_id: data_id,
+                label_id: label_id
+              },
+              error: function(xhr) {
+                console.log('Can not get the data.(Error code: 2)');
+              },
+              success: function(response) {
+                if(response != 0){
+                  //console.log(response.data);
+                  has_newdata = true;
+                  update_chart(response.id, response.data, label);
+                }else{
+                  has_newdata = false;
+                  console.log('No new data for ' + label);
+                }
+              }
+            });
+          };
+
+          update_chart = function(id, data, label, new_plot=false){
+              datapoint[label] = id[id.length-1];
+              if(new_plot){
+                data_set[label] = data;
+                data_step++;
+                if(data_step==data_ready)
+                  draw_plot();
+              }else
+                data_set[label] = data_set[label].concat(data);
+          };
+
+          setInterval(function(){
+            {% for label in labels  %}
+            get_latest_data(datapoint['{{label}}'], {{label.id}}, '{{label}}');
+            {% endfor  %}
+            if(has_newdata)redraw_plot();
+          },3000);
+        </script>
+
+    </body>
+</html>

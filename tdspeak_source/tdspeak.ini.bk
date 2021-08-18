@@ -1,0 +1,14 @@
+[uwsgi]
+uid = www
+gid = www
+
+socket = 127.0.0.1:8001
+chdir           = /home/pi/tdspeak
+module          = tdspeak.wsgi
+master          = true
+processes       = 1 
+
+threads = 2 
+max-requests = 6000
+
+daemonize = /home/pi/tdspeak/run.log

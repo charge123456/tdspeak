@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>SYSpeak - Data Viewer ({{project.project_name}})</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+          integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+          crossorigin="anonymous">
+        </script>
+        <script src="/static/js/chroma.js"></script>
+        <script src="/static/js/pixel_drawer.js"></script>
+    </head>
+    <body>
+        <div>
+            <h1>View project - {{project.project_name}}</h1>
+        </div>
+        <p>{{project.project_disc}}</p>
+        <div id="plot_area">
+            {% for chart in charts %}
+            <div style="position: relative;width: 652px;height: 492px;float: left;">
+                <div id="{{chart|cut:' '}}" style="margin: 5px;width:640px; height:480px;text-align:center;border: 1px solid;">
+                    <p style="margin: 0;">{{chart}}</p>
+                    <p style="margin: 0;">Data time: <span id="{{chart|cut:' '}}_datatime"></span></p>
+                    <span style="display: inline-block;height: 100%;vertical-align: middle;"></span>
+                    <img style="vertical-align: middle;height: 200px;width: 200px;" src="/static/img/loading.gif" />
+                </div>
+                <div id="{{chart|cut:' '}}_nodata" style="display:none;align-items: center;justify-content: center;position: absolute;width: 30%;height: 20%;left: 0;margin: auto;top: 0;bottom: 0;right: 0;text-align: center;background: antiquewhite;padding: 5px;">
+                    <p style=""></p>
+                </div>
+            </div>
+            {% endfor %}
+            <canvas id="test" style="vertical-align: middle;" height=400 width=400></canvas>
+        </div>
+        <script>
+          var chart_set = [];
+          var data_set = [];
+          var datapoint = [];
+          var if_allchart = 0;
+          var has_newdata = 0;
+          var isupdated = false;
+          var data_step = 0;
+          var data_ready = parseInt({{labels.count}});
+          var data_ready_count = parseInt({{labels.count}});
+          var chart_ready = parseInt({{charts.count}});
+          var colors = gen_color_table();
+
+          $(document).ready(function() {
+            console.log("Start load data...");
+            {% for label in labels %}
+            get_all_data({{label.id}}, '{{label}}');
+            {% endfor %}
+          });
+
+          draw_plot = function(){
+            {% for chart, trace_set in chart_set.items %}
+            var trace_set = JSON.parse('{{trace_set}}'.replace(/&#39;/g, '"'));
+            //console.log(trace_set);
+            {% if trace_set.0 == '0'  %}
+            draw_line_graph('{{chart}}',  trace_set);
+            {% elif trace_set.0 == '9' %}
+            draw_thermal_graph('{{chart}}', trace_set);
+            {% endif %}
+            {% endfor %}
+            //console.log('Drew all chart!');
+            data_ready = true;
+            isupdated = true;
+            //$('[id$="_nodata"]').children('p').text('Data sync...');
+            //$('[id$="_nodata"]').css('display', 'flex');
+            console.log('Start fetch new data...');
+          };
+
+          draw_thermal_graph = function(title, data){
+            //initCanvas('thermal');
+            console.log(data);
+            console.log(data_set);
+            $('#'+title.replace(/ /g, '')).append(canvas_template(title.replace(/ /g, '')));
+            if(data[4].length == 0){
+              var parse_data = 0;
+              $('#' + title.replace(/ /g, '') + '_nodata').children('p').text('There is no data has been assigned to this chart.');
+              $('#' + title.replace(/ /g, '') + '_nodata').css('display', 'flex');
+            }else if(data_set[data[4][0].xAxis_id].length == 0){
+              var parse_data = 0;
+              $('#' + title.replace(/ /g, '') + '_nodata').children('p').text('Waiting for data...');
+              $('#' + title.replace(/ /g, '') + '_nodata').css('display', 'flex');
+            }else if(data_set[data[4][0].xAxis_id].length == 5000){
+              $('#' + title.replace(/ /g, '') + '_nodata').children('p').text('Data sync...');
+              $('#' + title.replace(/ /g, '') + '_nodata').css('display', 'flex');
+              var parse_data = JSON.parse(data_set[data[4][0].xAxis_id][data_set[data[4][0].xAxis_id].length-1]);
+              var datatime = new Date(data_set[data[4][0].xAxis_id + '_time'][data_set[data[4][0].xAxis_id + '_time'].length-1]);
+              datatime = datatime.getFullYear() + '/' + (datatime.getMonth()+1) + '/' + datatime.getDate() + ' ' +
+                                                         datatime.getHours() + ':' + datatime.getMinutes() + ':' + datatime.getSeconds() + '.' +
+                                                         datatime.getMilliseconds();
+            }else{
+              $('#' + title.replace(/ /g, '') + '_nodata').hide();
+              var parse_data = JSON.parse(data_set[data[4][0].xAxis_id][data_set[data[4][0].xAxis_id].length-1]);
+              var datatime = new Date(data_set[data[4][0].xAxis_id + '_time'][data_set[data[4][0].xAxis_id + '_time'].length-1]);
+              datatime = datatime.getFullYear() + '/' + (datatime.getMonth()+1) + '/' + datatime.getDate() + ' ' +
+                                                         datatime.getHours() + ':' + datatime.getMinutes() + ':' + datatime.getSeconds() + '.' +
+                                                         datatime.getMilliseconds();
+              //console.log(data_set[data[4][0].xAxis_id + '_time'][data_set[data[4][0].xAxis_id + '_time'].length-1]);
+            }
+            var ctx = initCanvas(title.replace(/ /g, ''));
+            //console.log(data);
+            drawPixel(ctx[0], parse_data);
+            ctx[1].drawImage(ctx[2], 0, 0, 800, 800);
+            ctx[1].fillStyle='#FFFFFF';
+            ctx[1].font = '32px Arial';
+            ctx[1].fillText(datatime, 10, 30);
+            ctx[1].fillText('Researcher: {{project.project_creator.first_name}} {{project.project_creator.last_name}}',450,750);
+            ctx[1].fillText('SYWU IOT LAB, NDHU',450,790);
+            var cc = ctx[1].createLinearGradient(0, 0, 0, 800)
+            var color = gen_color();
+            cc.addColorStop(0, color[1023]);
+            cc.addColorStop(.5, color[511]);
+            cc.addColorStop(1, color[0]);
+            console.log(color[1023]);
+            ctx[1].fillStyle=cc;
+            ctx[1].fillRect(820, 0, 100, 800);
+            ctx[1].fillStyle='#000000';
+            ctx[1].fillText('25'+String.fromCharCode(8451), 930, 790);
+            ctx[1].fillText('75'+String.fromCharCode(8451), 930, 30);
+            ctx[3].style.width = '500px';
+            ctx[3].style.height = '400px';
+            $('#'+title.replace(/ /g, '')+'_datatime').text(datatime);
+            $('#'+title.replace(/ /g, '')).children('img').remove();
+            $('#'+title.replace(/ /g, '')).children('span').remove();
+            $('#ocanvas_'+title.replace(/ /g, '')).show();
+            if_allchart++;
+            if(chart_ready == if_allchart)
+              console.log('Drew all chart!');
+          }
+
+          redraw_thermal_graph = function(title, data){
+            //console.log(data);
+            //console.log(data_set);
+            console.log(data_set[data[4][0].xAxis_id].length);
+            //console.log(data_set[data[4][0].xAxis_id][data_set[data[4][0].xAxis_id].length-1]);
+            $('#' + title.replace(/ /g, '') + '_nodata').css('display', 'none');
+            console.log(data_set[data[4][0].xAxis_id].length > 0);
+            if(data_set[data[4][0].xAxis_id].length == 0) {console.log('AAA');return 0;}
+            var parse_data = JSON.parse(data_set[data[4][0].xAxis_id][data_set[data[4][0].xAxis_id].length-1]);
+            var datatime = new Date(data_set[data[4][0].xAxis_id + '_time'][data_set[data[4][0].xAxis_id + '_time'].length-1]);
+            datatime = datatime.getFullYear() + '/' + (datatime.getMonth()+1) + '/' + datatime.getDate() + ' ' +
+                                                       datatime.getHours() + ':' + datatime.getMinutes() + ':' + datatime.getSeconds() + '.' +
+                                                       datatime.getMilliseconds();
+            if(data_set[data[4][0].xAxis_id + '_more']){
+              $('#' + title.replace(/ /g, '') + '_nodata').children('p').text('Data sync...');
+              $('#' + title.replace(/ /g, '') + '_nodata').css('display', 'flex');
+            }else{
+              $('#' + title.replace(/ /g, '') + '_nodata').css('display', 'none');
+            }
+            var can = $('#canvas_' + title.replace(/ /g, ''))[0];
+            ctx = can.getContext('2d');
+            drawPixel(ctx, parse_data);
+            var octx = $('#ocanvas_' + title.replace(/ /g, ''))[0];
+            octx = octx.getContext('2d');
+            octx.drawImage(can, 0, 0, 800, 800);
+            octx.fillStyle='#FFFFFF';
+            octx.font = '32px Arial';
+            octx.fillText(datatime, 10, 30);
+            octx.fillText('Researcher: {{project.project_creator.first_name}} {{project.project_creator.last_name}}',450,750);
+            octx.fillText('SYWU IOT LAB, NDHU',450,790);
+            $('#'+title.replace(/ /g, '')+'_datatime').text(datatime);
+            //console.log(data);
+          }
+
+          draw_line_graph = function(chart_name, trace_set, x_time='', y_time=''){
+            data = [];
+            if(trace_set[4].length == 0){
+              $('#' + chart_name.replace(/ /g, '') + '_nodata').children('p').text('No any trace in this chart!');
+              $('#' + chart_name.replace(/ /g, '') + '_nodata').css('display', 'flex');
+            }
+            for(var i = 0; i < trace_set[4].length; i++){
+              if((data_set[trace_set[4][i].xAxis_id + x_time].length == 0) || (data_set[trace_set[4][i].yAxis_id + y_time].length == 0)){
+                $('#' + chart_name.replace(/ /g, '') + '_nodata').children('p').text('Waiting for data...');
+                $('#' + chart_name.replace(/ /g, '') + '_nodata').css('display', 'flex');
+              }else if((data_set[trace_set[4][i].xAxis_id + x_time].length == 5000) || (data_set[trace_set[4][i].yAxis_id + y_time].length == 5000)){
+                $('#' + chart_name.replace(/ /g, '') + '_nodata').children('p').text('Data sync...');
+                $('#' + chart_name.replace(/ /g, '') + '_nodata').css('display', 'flex');
+              }else
+                $('#' + chart_name.replace(/ /g, '') + '_nodata').hide();
+              if(trace_set[4][i].xAxis_id == trace_set[4][i].yAxis_id)
+                var trace = {
+                  x: data_set[trace_set[4][i].xAxis_id + '_time'],
+                  y: data_set[trace_set[4][i].xAxis_id],
+                  name: trace_set[4][i].traceName,
+                  type: 'scatter'
+                  //mode: 'lines+markers'
+                };
+              else
+                var trace = {
+                  x: data_set[trace_set[4][i].xAxis_id],
+                  y: data_set[trace_set[4][i].yAxis_id],
+                  name: trace_set[4][i].traceName,
+                  type: 'scatter'
+                  //mode: 'lines+markers'
+                };
+              data.push(trace);
+            }
+            var layout = {
+              title: chart_name,
+              xaxis: {title: trace_set[2]},
+              yaxis: {title: trace_set[3]}
+            };
+            $('#'+chart_name.replace(/ /g, '')).html('');
+            Plotly.newPlot(chart_name.replace(/ /g, ''), data, layout, {displaylogo: false});
+            if_allchart++;
+            if(chart_ready == if_allchart)
+              console.log('Drew all chart!');
+          };
+          
+          redraw_plot = function(){
+            {% for chart, trace_set in chart_set.items %}
+            {% if trace_set.0 == '0'  %}
+            var isTraceReady = false;
+            {% for trace in trace_set.4 %}
+            //console.log(JSON.parse('{{trace}}'.replace(/&#39;/g, '"')));
+            {% if trace.xAxis_id == trace.yAxis_id %}
+            {{chart|cut:' '}}.data[{{ forloop.counter0 }}]['x'] = data_set['{{trace.xAxis_id}}_time'];
+            {{chart|cut:' '}}.data[{{ forloop.counter0 }}]['y'] = data_set['{{trace.xAxis_id}}'];
+            {% else %}
+            {{chart|cut:' '}}.data[{{ forloop.counter0 }}]['x'] = data_set['{{trace.xAxis_id}}'];
+            {{chart|cut:' '}}.data[{{ forloop.counter0 }}]['y'] = data_set['{{trace.yAxis_id}}'];
+            {% endif %}
+            if(data_set['{{trace.xAxis_id}}'].length > 0 && data_set['{{trace.yAxis_id}}'].length > 0)
+              isTraceReady = true;
+            if(data_set['{{trace.xAxis_id}}_more']||data_set['{{trace.yAxis_id}}_more']){
+              isTraceReady = false;
+              $('#{{chart|cut:' '}}_nodata').children('p').text('Data sync...');
+              $('#{{chart|cut:' '}}_nodata').css('display', 'flex');
+            }
+            {% endfor %}
+            if(isTraceReady){
+              $('#{{chart|cut:' '}}_nodata').hide();
+              Plotly.redraw({{chart|cut:' '}});
+            }
+            {% elif trace_set.0 == '9' %}
+            var trace_set = JSON.parse('{{trace_set}}'.replace(/&#39;/g, '"'));
+            redraw_thermal_graph('{{chart}}', trace_set);
+            {% endif %}
+            {% endfor %}
+            //isupdated = true;
+            console.log('Updated all chart!');
+          };
+
+          get_all_data = function(label_id, label){
+            $.ajax({
+              url: '/dataviewer/getData/',
+              type: 'GET',
+              data: {
+                label_id: label_id
+              },
+              error: function(xhr) {
+                console.log('Can not get the data.(Error code: 1)');
+              },
+              success: function(response) {
+                if(response != 0){
+                  update_chart(true, label_id, response.id, response.data, response.insert_date);
+                  //console.log(response.data);
+                }else{
+                  //data_set[label_id+'_more'] = false;
+                  console.log('No data for ' + label + ', waiting for new data.');
+                  update_chart(true, label_id);
+                }
+              }
+            });
+          };
+
+          get_latest_data = function(data_id, label_id, label){
+            $.ajax({
+              url: '/dataviewer/getData/',
+              type: 'GET',
+              data: {
+                data_id: data_id,
+                label_id: label_id
+              },
+              error: function(xhr) {
+                console.log('Can not get the data.(Error code: 2)');
+              },
+              success: function(response) {
+                if(response != 0){
+                  //console.log(response.data);
+                  has_newdata++;
+                  data_step++;
+                  update_chart(false, label_id, response.id, response.data, response.insert_date);
+                  //if(update_chart(false, label_id, response.id, response.data, response.insert_date)){
+                    //$('[id$="_nodata"]').children('p').text('Data sync...');
+                    //$('[id$="_nodata"]').css('display', 'flex');
+                  //}else
+                    //$('[id$="_nodata"]').hide();
+                  if(data_step==data_ready_count)
+                    isupdated = true;
+                }else{
+                  //$('[id$="_nodata"]').css('display', 'none');
+                  data_set[label_id+'_more'] = false;
+                  console.log('No new data for ' + label);
+                  //update_chart(false, label_id);
+                  data_step++;
+                  if(data_step==data_ready_count)
+                    isupdated = true;
+                }
+              }
+            });
+          };
+
+          update_chart = function(new_plot, label_id, id = 0, data = [], time = []){
+              if(id == 0)
+                datapoint[label_id] = 0;
+              else
+                datapoint[label_id] = id[id.length-1];
+              if(new_plot){
+                data_set[label_id] = data;
+                data_set[label_id+'_time'] = time;
+                data_step++;
+                if(data_step==data_ready)
+                  draw_plot();
+              }else{
+                data_set[label_id] = data_set[label_id].concat(data);
+                //console.log(dtrueata_set[label_id]);
+                data_set[label_id+'_time'] = data_set[label_id+'_time'].concat(time);
+                //console.log(data.length);
+                if(data.length == 5000){
+                  data_set[label_id+'_more'] = true;
+                }else{
+                  data_set[label_id+'_more'] = false;
+                }
+              }
+              //isupdated = true;
+          };
+
+          setInterval(function(){
+            if(data_ready === true && isupdated){
+              isupdated = false;
+              data_step = 0;
+              {% for label in labels  %}
+              get_latest_data(datapoint[{{label.id}}], {{label.id}}, '{{label}}');
+              //console.log(datapoint[{{label.id}}]);
+              {% endfor %}
+              if(has_newdata > 0){
+                redraw_plot();
+                has_newdata = 0;
+              }
+            }else{
+              console.log('Data updating...');
+            }
+          },3000);
+        </script>
+
+    </body>
+</html>

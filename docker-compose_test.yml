@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  tdspeak_1:
+    image: sywucluster-node01:5000/tdspeak
+    ports:
+      - "8000:8000"
+  nginx:
+    image: sywucluster-node01:5000/httpd_for_tdspeak
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - tdspeak_1

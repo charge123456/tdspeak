@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}User panel{% endblock title %}
+{% block up %} actives{% endblock %}
+
+{% block content %}
+        <section class="container pb-5">
+            <div class="row">
+                <div class="col-md-12 py-5">
+                    <h1>My projects</h1>
+                    <div class="row">
+                        <div class="col-sm-12 col-md-3 col-lg-2">
+                            <div class="pb-3">
+                                <button class="btn btn-primary align-bottom mr-1 col-sm-12" data-toggle="modal" data-target="#newPrjModal">New project</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <tbody>
+                                <tr>
+                                    <th class="w-25">Project</th>
+                                    <th class="w-50">Discription</th>
+                                    <th class="w-25">Created date</th>
+                                    <th>View</th>
+                                </tr>
+                                {% if project_list %}
+                                {% for project in project_list %}
+                                <tr>
+                                    <td><a href="project/{{ project.id }}/">{{ project.project_name }}</a></td>
+                                    <td>{{ project.project_disc }}</td>
+                                    <td>{{ project.create_date }}</td>
+                                    <td><a href="/dataviewer/view/{{ project.id }}/" target="_blank" class="btn btn-primary align-bottom btn-sm mr-1">View</a></td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td class="text-center" colspan="3">There is no any project available.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="w-100 my-4"></div>
+            </div>
+        </section>
+{% endblock %}
+
+{% block modal %}
+        <div class="modal fade" id="newPrjModal" tabindex="-1" role="dialog">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">New project</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <form action="new_project/" method="POST">
+                <div class="modal-body">
+                  {% csrf_token %}
+                  <div class="form-group row">
+                    <label class="col-lg-3 col-form-label form-control-label text-muted">Project name</label>
+                    <div class="col-lg-9">
+                      {{ form.project_name }}
+                    </div>
+                  </div>
+                  <div class="form-group row">
+                    <label class="col-lg-3 col-form-label form-control-label text-muted">Discription</label>
+                    <div class="col-lg-9">
+                      {{ form.project_disc }}
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+{% endblock %}

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>SYSpeak - Data Viewer ({{project.project_name}})</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+          integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+          crossorigin="anonymous">
+        </script>
+        <script src="/static/js/chroma.js"></script>
+        <script src="/static/js/pixel_drawer.js"></script>
+    </head>
+    <body>
+        <div>
+            <h1>View project - {{project.project_name}}</h1>
+        </div>
+        <p>{{project.project_disc}}</p>
+        <div id="plot_area">
+            {% for chart in charts %}
+            <div style="position: relative;width: 652px;height: 492px;float: left;">
+                <div id="{{chart|cut:' '}}" style="margin: 5px;width:640px; height:480px;text-align:center;border: 1px solid;">
+                    <p style="margin: 0;">{{chart}}</p>
+                    <p style="margin: 0;">Data time: <span id="{{chart|cut:' '}}_datatime"></span></p>
+                    <span style="display: inline-block;height: 100%;vertical-align: middle;"></span>
+                    <img style="vertical-align: middle;height: 200px;width: 200px;" src="/static/img/loading.gif" />
+                </div>
+                <div id="{{chart|cut:' '}}_nodata" style="display:none;align-items: center;justify-content: center;position: absolute;width: 30%;height: 20%;left: 0;margin: auto;top: 0;bottom: 0;right: 0;text-align: center;background: antiquewhite;padding: 5px;">
+                    <p style=""></p>
+                </div>
+            </div>
+            {% endfor %}
+            <canvas id="test" style="vertical-align: middle;" height=400 width=400></canvas>
+        </div>
+        <script>
+          var chart_set = [];
+          var data_set = [];
+          var datapoint = [];
+          var if_allchart = 0;
+          var has_newdata = 0;
+          var isupdated = false;
+          var data_step = 0;
+          var data_ready = parseInt({{labels.count}});
+          var data_ready_count = parseInt({{labels.count}});
+          var chart_ready = parseInt({{charts.count}});
+          var colors = gen_color_table();
+
+          $(document).ready(function() {
+            console.log("Start load data...");
+            {% for label in labels %}
+            get_all_data({{label.id}}, '{{label}}');
+            {% endfor %}
+          });
+
+          draw_plot = function(){
+            {% for chart, trace_set in chart_set.items %}
+            var trace_set = JSON.parse('{{trace_set}}'.replace(/&#39;/g, '"'));
+            //console.log(trace_set);
+            {% if trace_set.0 == '0'  %}
+            draw_line_graph('{{chart}}',  trace_set);
+            {% elif trace_set.0 == '9' %}
+            draw_thermal_graph('{{chart}}', trace_set);
+            {% endif %}
+            {% endfor %}
+            //console.log('Drew all chart!');
+            data_ready = true;
+            isupdated = true;
+            //$('[id$="_nodata"]').children('p').text('Data sync...');
+            //$('[id$="_nodata"]').css('display', 'flex');
+            console.log('Start fetch new data...');
+          };
+
+          draw_thermal_graph = function(title, data){
+            //initCanvas('thermal');
+            console.log(data);
+            console.log(data_set);
+            $('#'+title.replace(/ /g, '')).append(canvas_template(title.replace(/ /g, '')));
+            if(data[4].length == 0){
+              var parse_data = 0;
+              $('#' + title.replace(/ /g, '') + '_nodata').children('p').text('There is no data has been assigned to this chart.');
+              $('#' + title.replace(/ /g, '') + '_nodata').css('display', 'flex');
+            }else if(data_set[data[4][0].xAxis_id].length == 0){
+              var parse_data = 0;
+              $('#' + title.replace(/ /g, '') + '_nodata').children('p').text('Waiting for data...');
+              $('#' + title.repl<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>SYSpeak - Data Viewer ({{project.project_name}})</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+          integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+          crossorigin="anonymous">
+        </script>
+        <script src="/static/js/chroma.js"></script>
+        <script src="/static/js/pixel_drawer.js"></script>
+    </head>
+    <body>
+        <div>
+            <h1>View project - {{project.project_name}}</h1>
+        </div>
+        <p>{{project.project_disc}}</p>
+        <div id="plot_area">
+            {% for chart in charts %}
+            <div style="position: relative;width: 652px;height: 492px;float: left;">
+                <div id="{{chart|cut:' '}}" style="margin: 5px;width:640px; height:480px;text-align:center;border: 1px solid;">
+                    <p style="margin: 0;">{{chart}}</p>
+                    <p style="margin: 0;">Data time: <span id="{{chart|cut:' '}}_datatime"></span></p>
+                    <span style="display: inline-block;height: 100%;vertical-align: middle;"></span>
+                    <img style="vertical-align: middle;height: 200px;width: 200px;" src="/static/img/loading.gif" />
+                </div>
+                <div id="{{chart|cut:' '}}_nodata" style="display:none;align-items: center;justify-content: center;position: absolute;width: 30%;height: 20%;left: 0;margin: auto;top: 0;bottom: 0;right: 0;text-align: center;background: antiquewhite;padding: 5px;">
+                    <p style=""></p>
+                </div>
+            </div>
+            {% endfor %}
+            <canvas id="test" style="vertical-align: middle;" height=400 width=400></canvas>
+        </div>
+        <script>
+          var chart_set = [];
+          var data_set = [];
+          var datapoint = [];
+          var if_allchart = 0;
+          var has_newdata = 0;
+          var isupdated = false;
+          var data_step = 0;
+          var data_ready = parseInt({{labels.count}});
+          var data_ready_count = parseInt({{labels.count}});
+          var chart_ready = parseInt({{charts.count}});
+          var colors = gen_color_table();
+
+          $(document).ready(function() {
+            console.log("Start load data...");
+            {% for label in labels %}
+            get_all_data({{label.id}}, '{{label}}');
+            {% endfor %}
+          });
+
+          draw_plot = function(){
+            {% for chart, trace_set in chart_set.items %}
+            var trace_set = JSON.parse('{{trace_set}}'.replace(/&#39;/g, '"'));
+            //console.log(trace_set);
+            {% if trace_set.0 == '0'  %}
+            draw_line_graph('{{chart}}',  trace_set);
+            {% elif trace_set.0 == '9' %}
+            draw_thermal_graph('{{chart}}', trace_set);
+            {% endif %}
+            {% endfor %}
+            //console.log('Drew all chart!');
+            data_ready = true;
+            isupdated = true;
+            //$('[id$="_nodata"]').children('p').text('Data sync...');
+            //$('[id$="_nodata"]').css('display', 'flex');
+            console.log('Start fetch new data...');
+          };
+
+          draw_thermal_graph = function(title, data){
+            //initCanvas('thermal');
+            console.log(data);
+            console.log(data_set);
+            $('#'+title.replace(/ /g, '')).append(canvas_template(title.replace(/ /g, '')));
+            if(data[4].length == 0){
+              var parse_data = 0;
+              $('#' + title.replace(/ /g, '') + '_nodata').children('p').text('There is no data has been assigned to this chart.');
+              $('#' + title.replace(/ /g, '') + '_nodata').css('display', 'flex');
+            }else if(data_set[data[4][0].xAxis_id].length == 0){
+              var parse_data = 0;
+              $('#' + title.replace(/ /g, '') + '_nodata').children('p').text('Waiting for data...');
+              $('#' + title.repl

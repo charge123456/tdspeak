@@ -1,0 +1,54 @@
+
+<head>
+  <!-- Plotly.js -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+  <h1>{{ project }}</h1>
+    {% if data_list %}
+        <a href="../../delete_data/{{ project.id }}">Delete All Data</a>
+        <div id="div1" style="width:800px; height:600;float:left;"></div>
+        <div id="div2" style="width:800px; height:600;float:left;"></div>
+        <script>
+          xdata = [{% for data in data_list %}'{{ data.insert_date|date:'Y-m-d H:i:s' }}',{% endfor %}];
+          ydata = [{% for data in data_list %}'{{ data.x_axis }}',{% endfor %}];
+          ydata2 = [{% for data in data_list %}'{{ data.y_axis }}',{% endfor %}];
+          var trace1 = {
+            x: xdata.reverse(), 
+            y: ydata.reverse(), 
+            mode: 'lines+markers'
+          };
+          var trace2 = {
+            x: xdata,
+            y: ydata2.reverse(),
+            mode: 'lines+markers'
+          };
+          var data = [trace1];
+          var data2 = [trace2];
+          var layout1 = {
+            //title:'{{ project }}',
+            title: 'Pressure',
+	    xaxis: {range: [trace1.x[trace1.x.length-100], trace1.x[trace1.x.length-1]]},
+            yaxis: {showline: true,
+		    zeroline: true,}
+          };
+          var layout2 = {
+            title:'Packingfraction',
+            xaxis: {range: [trace2.x[trace2.x.length-100], trace2.x[trace2.x.length-1]]},
+            yaxis: {showline: true,
+                    zeroline: true,}
+          };
+          Plotly.newPlot('div1', data, layout1, {displaylogo: false});
+          Plotly.newPlot('div2', data2, layout2, {displaylogo: false});
+        </script>
+    {% else %}
+        <p>There is no data yet.</p>
+    {% endif %}
+  <script>
+    setTimeout(function(){
+      window.location.reload(1);
+    }, 2000);
+  </script>  
+  
+</body>
